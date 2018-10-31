@@ -3,6 +3,12 @@ package com.ginkgo.calcite.server;
 import com.thrift.calciteserver.CalciteServer;
 import com.thrift.calciteserver.InvalidParseRequest;
 import com.thrift.calciteserver.TPlanResult;
+import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.protocol.TProtocol;
+import org.apache.thrift.transport.TFramedTransport;
+import org.apache.thrift.transport.TSocket;
+import org.apache.thrift.transport.TTransport;
+import org.apache.thrift.transport.TTransportException;
 import org.apache.calcite.adapter.enumerable.EnumerableConvention;
 import org.apache.calcite.plan.*;
 import org.apache.calcite.plan.volcano.AbstractConverter;
@@ -23,11 +29,10 @@ import org.apache.thrift.TException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 import java.lang.String;
 import java.sql.Time;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Timer;
+import java.util.*;
 
 public class CalciteServerHandler implements CalciteServer.Iface{
     final static Logger GLOGGER = LoggerFactory.getLogger(CalciteServerHandler.class);
@@ -52,10 +57,16 @@ public class CalciteServerHandler implements CalciteServer.Iface{
     public void updateMetadata(String catalog, String table) throws TException{}
 
     public static void createSchema() throws Exception {
-        Table table = new TableImpl();
         final SchemaPlus rootSchema = Frameworks.createRootSchema(true);
         SchemaPlus schema = rootSchema.add("x", new AbstractSchema());
-        schema.add("MYTABLE", table);
+//        schema.add("MYTABLE", table);
+        List<TTableDescriptor> tables=getTables();
+        for (TTableDescriptor table : tables) {
+            System.out.println(table.tableName);
+            GinkgoTable tb=new GinkgoTable(table);
+            rootSchema.add(table.tableName, tb);
+        }
+
         List<RelTraitDef> traitDefs = new ArrayList<>();
         traitDefs.add(ConventionTraitDef.INSTANCE);
         traitDefs.add(RelDistributionTraitDef.INSTANCE);
@@ -114,4 +125,41 @@ public class CalciteServerHandler implements CalciteServer.Iface{
         return json;
     }
 
+//    public static Set<String> getTables() throws Exception {
+//        int ginkgoPort=9090;
+//
+//        TTransport socket = new TSocket("localhost",ginkgoPort);
+//        TTransport transport = new TFramedTransport(socket);
+//        TProtocol protocol = new TBinaryProtocol(transport);
+//        socket.open();
+//
+//        Ginkgo.Client client = new Ginkgo.Client(protocol);
+//
+//        List<TTableDescriptor> table_list=client.get_tables_meta();
+//
+//        Set<String> tables=new HashSet<>();
+//
+//        for (int i=0;i<table_list.size();++i){
+//            tables.add(table_list.get(i).tableName);
+//        }
+//
+//        socket.close();
+//
+//        return tables;
+//    }
+
+public static List<TTableDescriptor> getTables() throws Exception {
+    int ginkgoPort=9090;
+
+    TTransport socket = new TSocket("localhost",ginkgoPort);
+    TTransport transport = new TFramedTransport(socket);
+    TProtocol protocol = new TBinaryProtocol(transport);
+    socket.open();
+
+    Ginkgo.Client client = new Ginkgo.Client(protocol);
+
+    List<TTableDescriptor> table_list=client.get_tables_meta();
+
+    return table_list;
+}
 }

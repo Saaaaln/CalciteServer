@@ -25,7 +25,7 @@ public class Client {
             transport.open();
             // user processing
             for(int i=0;i<10;++i) {
-                TPlanResult result = client.sql2Plan("fzh","123456","default","select * from MYTABLE",true,false);
+                TPlanResult result = client.sql2Plan("fzh","123456","default","select * from T1",true,false);
                 System.out.println("Thrift client result=" + result.plan_result);
             }
 
